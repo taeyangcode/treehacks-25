@@ -1,0 +1,6 @@
+{
+    "invalid_urls": ["nytimes.com", "youtube.com", "policies.google.com", 
+                "support.google.com", "maps.google.com", "google.com",
+                "accounts.google.com"
+        ]
+}

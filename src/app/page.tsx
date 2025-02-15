@@ -13,9 +13,9 @@ export default function Home() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    console.log("Calling backend now")
     try {
-      const res = await fetch("http://127.0.0.1:5000/api/process", {
+      const res = await fetch("http://127.0.0.1:5000/api/scrape/start", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

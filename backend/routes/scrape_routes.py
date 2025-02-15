@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify 
-from scrape.scraper import start_scrape
+from scrape.scraper import scrape_urls
 
 scrapy_bp = Blueprint('scrape', __name__)
 
@@ -7,5 +7,5 @@ scrapy_bp = Blueprint('scrape', __name__)
 def start_scraping():
     data = request.json
 
-    
-    return 
+    scrape_urls()
+    return jsonify({"hello": "world"})
