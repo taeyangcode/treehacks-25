@@ -16,12 +16,6 @@ def groq_response(custom_schema: Type[BaseModel], article_text: str):
     groq_key = os.getenv("GROQAPIKEY")
     client = groq.Client(api_key=groq_key)
 
-
-    # Dynamically changing user schema
-    # user_schema: Dict[str, str] = request.json.get("schema", {})
-    # DynamicSchema = create_model("DynamicSchema", **{key: (eval(value), ...) for key, value in user_schema.items()})
-    # class RowList(BaseModel):
-    #     row_list: list[DynamicSchema]  # Enforce list of rows
         
     print("setting up parameters")
     print(f"Schema Class: {custom_schema}")
@@ -32,8 +26,7 @@ def groq_response(custom_schema: Type[BaseModel], article_text: str):
             {
                 "role": "system", 
                 "content": """
-                    You extract mergers and acquisitions information formatted as schema defined rows from user given text. 
-                    You are in streaming mode 
+                    You extract row information formatted as schema defined rows from user given text. 
                     Only output each data chunk as a row following the below schema. 
                     Don't output any other kind of text
                     Note that this given text is all text in a webpage and can contain irrelevant info such as ads.\n """

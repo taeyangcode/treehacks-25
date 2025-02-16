@@ -25,11 +25,11 @@ def start_scraping():
     print("Starting to scrape for urls")
     url_list, browser, client, scrapy_instance = scrape_urls(user_prompt)
 
-    new_url_list = ["https://dealroom.net/blog/recent-m-a-deals", "https://intellizence.com/insights/merger-and-acquisition/largest-merger-acquisition-deals/", "https://www.alpha-sense.com/blog/trends/mergers-and-acquisitions-2024/", "https://www.devensoft.com/blog/the-top-mergers-and-acquisitions-of-2023/"]
+    # new_url_list = ["https://dealroom.net/blog/recent-m-a-deals", "https://intellizence.com/insights/merger-and-acquisition/largest-merger-acquisition-deals/", "https://www.alpha-sense.com/blog/trends/mergers-and-acquisitions-2024/", "https://www.devensoft.com/blog/the-top-mergers-and-acquisitions-of-2023/"]
     def generate():
         row_count = 0
         local_rowlist = [] 
-        for url in new_url_list:
+        for url in url_list:
             # Scrapybara scrape website
             print(f"Starting scrape for this url: {url}")
             article_text = scrape_website(url, client, scrapy_instance, browser)

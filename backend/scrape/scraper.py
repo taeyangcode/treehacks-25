@@ -50,7 +50,7 @@ def scrape_urls(prompt: str):
     print("Extracting Links across pages")
     page_links = []
 
-    for _ in range(1):
+    for _ in range(3):
         page_links.extend(
             page.eval_on_selector_all("a", "elements => elements.map(el => el.href)")
         )
