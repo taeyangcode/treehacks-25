@@ -25,9 +25,7 @@ export default function RootLayout({
 }>) {
 	return (
 		<html lang="en">
-			<body className={`${departure.variable} ${manrope.variable} h-dvh w-full bg-[#171717] antialiased`}>
-				{children}
-			</body>
+			<body className={`${departure.variable} ${manrope.variable} h-dvh w-full antialiased`}>{children}</body>
 		</html>
 	);
 }
