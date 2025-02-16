@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from dotenv import load_dotenv
 from playwright.sync_api import sync_playwright
 from pydantic import BaseModel
@@ -12,6 +13,11 @@ from scrapybara import Scrapybara
 load_dotenv()
 with open("./data/invalid_domains.json", "r") as fp:
     data = json.load(fp)
+
+
+class Website_Info(BaseModel):
+    weburl: str
+    article_text: str
 
 
 def scrape_urls():
@@ -38,7 +44,7 @@ def scrape_urls():
     page_links = []
 
     for _ in range(5):
-        page_links.extend(page.locator('a').all())
+        page_links.extend(page.eval_on_selector_all("a", "elements => elements.map(el => el.href)"))
         print(f"curret link length {len(page_links)}")
 
         # Scroll to the #pnnext element before clicking
@@ -47,22 +53,64 @@ def scrape_urls():
         
         print("Attempting to click on the next button")
         page.click('a#pnnext')
-        # element = page.locator('span#pnnext')
-        # element.scroll_into_view_if_needed()
-        # element.click()
         page.wait_for_timeout(2000)
 
     print(f"Page Links Extracted: {len(page_links)},  {page_links}")
     valid_urls = list(filter(link_filter, page_links))
 
     print(f"Valid links Extract: {len(valid_urls)}, {valid_urls}")
+    return [valid_urls, browser, client]
+
+def initialize_tools():
+    # initialie Scrapybara client and scrapy instance 
+    print("Starting the client instance")
+    scrapy_key = os.getenv("SCRAPYBARAKEY")
+    client = Scrapybara(api_key=scrapy_key)
+    scrapy_instance = client.start_ubuntu(timeout_hours=0.1)
+    cdp_url = scrapy_instance.browser.start().cdp_url
+
+    print("Starting playwright")
+    playwright = sync_playwright().start()
+    browser = playwright.chromium.connect_over_cdp(cdp_url)
+
+    return [client, browser, scrapy_instance]
+
+def scrape_website(url, client, scrapy_instance, browser):
+    # Starting Scrapybara instance 
+    print("Getting new page")
+    page = browser.new_page()
+
+    print(f"Going to provided url: {url}")
+    page.goto(url)
+    page.wait_for_timeout(1000)
+
+    getcontent_response = client.act(
+        model=Anthropic(),
+        tools=[
+            BashTool(scrapy_instance),
+            ComputerTool(scrapy_instance),
+            EditTool(scrapy_instance),
+        ],
+        system=UBUNTU_SYSTEM_PROMPT,
+        prompt=f"""
+        You are currently on the website of interest.
+        Extract all the raw text of the article directly from the nested HTML. 
+        Do not click on any pop-ups. X them out. 
+
+        Do not extract text from ads or any unrelated content.
+        If you hit a CAPTCHA, stop scraping.
+        """,
+        schema=Website_Info,
+        on_step=lambda step: print(step.text)
+        )
+    
+    print(f"\nExtraction: {getcontent_response.output.article_text}")
+
+    return getcontent_response.output.article_text
+
+
+def create_browser_instance():
     return
-
-def scrape_website():
-    return 
-
-
-
 
 def link_filter(link_url):
     # https:

@@ -2,8 +2,6 @@
 import React, { useState } from "react";
 
 
-
-
 export default function Home() {
   const [formData, setFormData] = useState({ param1: "", param2: "" });
 
@@ -30,6 +28,7 @@ export default function Home() {
       console.error("Error submitting form:", error);
     }
   };
+
 
   return (
     <div>
