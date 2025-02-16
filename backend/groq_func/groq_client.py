@@ -39,6 +39,7 @@ def stream_groq_response(article_text):
                                 Only output each data chunk as a row following the below schema. 
                                 The schema is the following: acquired company (str) / acquiring company (str) / price_value (int) / date
                                 Don't output any other kind of text
+                                Note that this given text is all text in a webpage and can contain irrelevant info such as ads.
                                 """
                 },
                 {
@@ -47,9 +48,10 @@ def stream_groq_response(article_text):
             ],
             stream=True,  # Enable streaming responses,
         )
-        print("Initializing groq streamed response")
+        print("Initializing groq streamed response \n")
 
         # Process the response stream
+        print("GROQ OUTPUT")
         for chunk in response:
             # Extract and print the message content incrementally
             if chunk:
@@ -57,7 +59,8 @@ def stream_groq_response(article_text):
                 # yield f"data: {data} \n\n" # Send each chunk as a Server-Sent-Event message
                 # print(chunk.choices[0].delta.content, end="")
     
+
     generate_response()
-    print("done")
+    print("")
     # return Response(generate_response(), content_type='text/event-stream')
     return 

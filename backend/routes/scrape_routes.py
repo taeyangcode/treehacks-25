@@ -10,15 +10,41 @@ def start_scraping():
     data = request.json
 
     # Scrapybara Scraping Code (do not delete)
-    # url_list, browser = scrape_urls()
-    # url = "https://aimresearch.co/ai-startups/top-tech-ma-deals-of-2024"
-    # client, browser, scrapy_instance = initialize_tools()
-    # article_text = scrape_website(url, client, scrapy_instance, browser)
+    url_list, browser, client, scrapy_instance = scrape_urls()
+    # client, browser, scrapy_instance = initialize_tools() # initialize however many threading instances
+
+    while url_list:
+        #url = "https://aimresearch.co/ai-startups/top-tech-ma-deals-of-2024"
+        url = url_list.pop()
+        # client, browser, scrapy_instance = initialize_tools()
+        article_text = scrape_website(url, client, scrapy_instance, browser)
+
+        #Sending results to groq
+        print("Sending results to groq")
+        groq_post_req(article_text)
+
+        print("Done scraping")
+    return jsonify({"hello": "world"})
 
 
-    #Sending results to groq
-    print("Sending results to groq")
-    text_data = """
+def groq_post_req(data):
+    url = "http://127.0.0.1:5000/api/groq/process"
+    headers = {"Content-Type": "application/json"}
+
+    try: 
+        response = requests.post(url, json=data, headers=headers)
+        response.raise_for_status()
+        return response.json()
+    
+    except requests.exceptions.RequestException as e:
+        print(f"Error calling the API: {e}")
+        return None
+    
+
+
+
+
+text_data = """
     Cisco Acquires Splunk for $28 Billion In a landmark deal, 
     Cisco completed its $28 billion acquisition of Splunk on March 18, 2024. 
     The all-cash transaction valued Splunk at $157 per share and brought 
@@ -100,21 +126,4 @@ def start_scraping():
     enhances Amazon’s capabilities in warehouse automation and AI-driven robotics, reinforcing its competitive 
     position in the AI talent market.
     """
-
-    groq_post_req(text_data)
-    return jsonify({"hello": "world"})
-
-
-def groq_post_req(data):
-    url = "http://127.0.0.1:5000/api/groq/process"
-    headers = {"Content-Type": "application/json"}
-
-    try: 
-        response = requests.post(url, json=data, headers=headers)
-        response.raise_for_status()
-        return response.json()
-    
-    except requests.exceptions.RequestException as e:
-        print(f"Error calling the API: {e}")
-        return None
     

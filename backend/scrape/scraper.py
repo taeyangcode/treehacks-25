@@ -59,14 +59,18 @@ def scrape_urls():
     valid_urls = list(filter(link_filter, page_links))
 
     print(f"Valid links Extract: {len(valid_urls)}, {valid_urls}")
-    return [valid_urls, browser, client]
+    return [valid_urls, browser, client, scrapy_instance]
 
 def initialize_tools():
     # initialie Scrapybara client and scrapy instance 
-    print("Starting the client instance")
+    print("Starting the client ")
     scrapy_key = os.getenv("SCRAPYBARAKEY")
     client = Scrapybara(api_key=scrapy_key)
+
+    print("Starting ubuntu instance")
     scrapy_instance = client.start_ubuntu(timeout_hours=0.1)
+    
+    print("Starting browser")
     cdp_url = scrapy_instance.browser.start().cdp_url
 
     print("Starting playwright")
@@ -84,33 +88,30 @@ def scrape_website(url, client, scrapy_instance, browser):
     page.goto(url)
     page.wait_for_timeout(1000)
 
-    getcontent_response = client.act(
-        model=Anthropic(),
-        tools=[
-            BashTool(scrapy_instance),
-            ComputerTool(scrapy_instance),
-            EditTool(scrapy_instance),
-        ],
-        system=UBUNTU_SYSTEM_PROMPT,
-        prompt=f"""
-        You are currently on the website of interest.
-        Extract all the raw text of the article directly from the nested HTML. 
-        Do not click on any pop-ups. X them out. 
+    # getcontent_response = client.act(
+    #     model=Anthropic(),
+    #     tools=[
+    #         BashTool(scrapy_instance),
+    #         ComputerTool(scrapy_instance),
+    #         EditTool(scrapy_instance),
+    #     ],
+    #     system=UBUNTU_SYSTEM_PROMPT,
+    #     prompt=f"""
+    #     You are currently on the website of interest.
+    #     Extract all the raw text of the article directly from the nested HTML. 
+    #     Do not click on any pop-ups. X them out. 
 
-        Do not extract text from ads or any unrelated content.
-        If you hit a CAPTCHA, stop scraping.
-        """,
-        schema=Website_Info,
-        on_step=lambda step: print(step.text)
-        )
+    #     Do not extract text from ads or any unrelated content.
+    #     If you hit a CAPTCHA, stop scraping.
+    #     """,
+    #     schema=Website_Info,
+    #     on_step=lambda step: print(step.text)
+    #     )
     
-    print(f"\nExtraction: {getcontent_response.output.article_text}")
+    page_content = page.inner_text('body') 
+    print(f"\nExtraction: {page_content}")
 
-    return getcontent_response.output.article_text
-
-
-def create_browser_instance():
-    return
+    return page_content
 
 def link_filter(link_url):
     # https:
