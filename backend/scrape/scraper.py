@@ -50,7 +50,7 @@ def scrape_urls(prompt: str):
     print("Extracting Links across pages")
     page_links = []
 
-    for _ in range(5):
+    for _ in range(2):
         page_links.extend(page.eval_on_selector_all("a", "elements => elements.map(el => el.href)"))
         print(f"curret link length {len(page_links)}")
 
@@ -112,9 +112,7 @@ def scrape_website(url, client, scrapy_instance, browser):
     #     on_step=lambda step: print(step.text)
     #     )
     
-    page_content = page.inner_text('body') 
-    print(f"\nExtraction: {page_content}")
-
+    page_content = page.inner_text('body')  
     return page_content
 
 def link_filter(link_url):

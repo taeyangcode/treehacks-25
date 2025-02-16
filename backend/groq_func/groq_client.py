@@ -7,9 +7,8 @@ from pydantic import BaseModel, create_model
 from flask import Flask, Response, request
 from typing import Dict, Any, Type
 
+
 load_dotenv()
-
-
 
 def groq_response(custom_schema: Type[BaseModel], article_text: str):
     # TODO: parameter of adding user-defined schema 
@@ -28,7 +27,7 @@ def groq_response(custom_schema: Type[BaseModel], article_text: str):
     print(f"Schema Class: {custom_schema}")
     print(f"Schema Fields: {custom_schema.__annotations__}")
     chat_completion = client.chat.completions.create(
-        model="llama3-70b-8192", 
+        model="deepseek-r1-distill-llama-70b", 
         messages=[
             {
                 "role": "system", 
@@ -41,7 +40,7 @@ def groq_response(custom_schema: Type[BaseModel], article_text: str):
                     f"The JSON object must use the schema enforcing the data types: {json.dumps(custom_schema.model_json_schema(), indent=2)}"
             },
             {
-                "role": "user", "content": article_text[:20000]
+                "role": "user", "content": article_text[:15000]
             }
         ],
         stream=False,

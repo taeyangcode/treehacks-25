@@ -2,6 +2,16 @@ from flask import Blueprint, Response, request, jsonify
 import requests
 from groq import Groq
 from scrape.scraper import scrape_urls, scrape_website, initialize_tools
+import json
+import csv
+import io
+import supabase
+from supabase import create_client
+import uuid
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 scrapy_bp = Blueprint('scrape', __name__)
 
@@ -9,15 +19,17 @@ scrapy_bp = Blueprint('scrape', __name__)
 def start_scraping():
     print("Received call from frontend")
     data = request.json
-    user_prompt, user_schema, row_limit = data.get("prompt"), data.get("schema"), data.get("row_limit")
+    user_id, user_prompt, user_schema, row_limit = data.get("user_id"), data.get("prompt"), data.get("schema"), data.get("row_limit")
     print(f"User prompt: {user_prompt}, User Schema: {user_schema}")
     # Scrapybara Scraping Urls (do not delete)
     print("Starting to scrape for urls")
     url_list, browser, client, scrapy_instance = scrape_urls(user_prompt)
 
+    new_url_list = ["https://dealroom.net/blog/recent-m-a-deals", "https://intellizence.com/insights/merger-and-acquisition/largest-merger-acquisition-deals/", "https://www.alpha-sense.com/blog/trends/mergers-and-acquisitions-2024/", "https://www.devensoft.com/blog/the-top-mergers-and-acquisitions-of-2023/"]
     def generate():
         row_count = 0
-        for url in url_list:
+        local_rowlist = [] 
+        for url in new_url_list:
             # Scrapybara scrape website
             print(f"Starting scrape for this url: {url}")
             article_text = scrape_website(url, client, scrapy_instance, browser)
@@ -35,16 +47,25 @@ def start_scraping():
                 
                 # Stream the response
                 print("Received back groq output on call")
-                for chunk in response.iter_content(chunk_size=1024):
+                for chunk in response.iter_content(chunk_size=None):
                     if row_count >= row_limit:
+                        print("Finishing datastream")
+                        store_dataset_supabase(user_id, user_prompt, local_rowlist)
+                        print("Closing instance")
+                        scrapy_instance.browser.stop()
                         return
                     if chunk:
-                        row_count += 1
-                        print(f"Chunk: {chunk}")
-                        yield chunk.decode("utf-8")  # Convert bytes to string before yielding
+                        chunk_str = chunk.decode("utf-8")  # Convert bytes to string
+                        chunk_json = json.loads(chunk_str)  # Parse as JSON
+                        row_list = chunk_json.get("row_list", [])  # Extract row_list
+
+                        row_count += len(row_list)
+                        local_rowlist.extend(row_list)
+                        print(chunk_str)
+                        print(f"Current table length: {row_count}")
+                        
+                        yield chunk_str  # Yield the original JSON string
                     
-                
-        
             except requests.exceptions.RequestException as e:
                 print(f"Error calling the API: {e}")
                 return None
@@ -52,6 +73,31 @@ def start_scraping():
     return Response(generate(), content_type="application/json")
 
     
+def store_dataset_supabase(userid, user_prompt, dataset):
+    sb_url = os.getenv("NEXT_PUBLIC_SUPABASE_PROJECT_URL")
+    sb_key = os.getenv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+
+    supabase = create_client(sb_url, sb_key)
+
+    # convert to csv
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=dataset[0].keys())
+    writer.writeheader()
+    writer.writerows(dataset)
+    csv_data = output.getvalue()
+
+    print("csv_string written")
+
+    sb_datapack = {
+        "user_id": "yutasidisasecret",
+        "session_id": str(uuid.uuid4()),
+        "user_prompt": user_prompt,
+        "dataset_csv": csv_data
+    }
+    print("Posting table data to supabase")
+    supabase.table('sessions').insert(sb_datapack).execute()
+    return 
+
 
 text_data = """
     Cisco Acquires Splunk for $28 Billion In a landmark deal, 
