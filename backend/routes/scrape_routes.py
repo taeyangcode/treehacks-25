@@ -9,13 +9,14 @@ scrapy_bp = Blueprint('scrape', __name__)
 def start_scraping():
     print("Received call from frontend")
     data = request.json
-    user_prompt, user_schema = data.get("prompt"), data.get("schema")
+    user_prompt, user_schema, row_limit = data.get("prompt"), data.get("schema"), data.get("row_limit")
     print(f"User prompt: {user_prompt}, User Schema: {user_schema}")
     # Scrapybara Scraping Urls (do not delete)
     print("Starting to scrape for urls")
     url_list, browser, client, scrapy_instance = scrape_urls(user_prompt)
 
     def generate():
+        row_count = 0
         for url in url_list:
             # Scrapybara scrape website
             print(f"Starting scrape for this url: {url}")
@@ -34,11 +35,15 @@ def start_scraping():
                 
                 # Stream the response
                 print("Received back groq output on call")
-
                 for chunk in response.iter_content(chunk_size=1024):
+                    if row_count >= row_limit:
+                        return
                     if chunk:
+                        row_count += 1
                         print(f"Chunk: {chunk}")
                         yield chunk.decode("utf-8")  # Convert bytes to string before yielding
+                    
+                
         
             except requests.exceptions.RequestException as e:
                 print(f"Error calling the API: {e}")
@@ -47,31 +52,6 @@ def start_scraping():
     return Response(generate(), content_type="application/json")
 
     
-
-    # while url_list:
-        #url = "https://aimresearch.co/ai-startups/top-tech-ma-deals-of-2024"
-        # url = url_list.pop()
-        # client, browser, scrapy_instance = initialize_tools()
-        # article_text = scrape_website(url, client, scrapy_instance, browser)
-
-        # #Sending results to groq
-        # print("Sending results to groq")
-
-        # url = "http://127.0.0.1:5000/api/groq/process"
-        # headers = {"Content-Type": "application/json"}
-        # try: 
-        #     response = requests.post(url, json=article_text, headers=headers)
-        #     response.raise_for_status()
-        #     return response.json()
-    
-        # except requests.exceptions.RequestException as e:
-        #     print(f"Error calling the API: {e}")
-        #     return None
-
-        # print("Done scraping")
-    # return jsonify({"hello": "world"})
-    # return Response(generate(), content_type="application/json")
-
 
 text_data = """
     Cisco Acquires Splunk for $28 Billion In a landmark deal, 

@@ -25,19 +25,20 @@ def groq_response(custom_schema: Type[BaseModel], article_text: str):
     #     row_list: list[DynamicSchema]  # Enforce list of rows
         
     print("setting up parameters")
+    print(f"Schema Class: {custom_schema}")
+    print(f"Schema Fields: {custom_schema.__annotations__}")
     chat_completion = client.chat.completions.create(
         model="llama3-70b-8192", 
         messages=[
             {
                 "role": "system", 
-                "content": f"""
+                "content": """
                     You extract mergers and acquisitions information formatted as schema defined rows from user given text. 
                     You are in streaming mode 
                     Only output each data chunk as a row following the below schema. 
                     Don't output any other kind of text
-                    Note that this given text is all text in a webpage and can contain irrelevant info such as ads.
-                    The JSON object must use the schema: {json.dumps(custom_schema.model_json_schema(), indent=2)}"
-                """
+                    Note that this given text is all text in a webpage and can contain irrelevant info such as ads.\n """
+                    f"The JSON object must use the schema enforcing the data types: {json.dumps(custom_schema.model_json_schema(), indent=2)}"
             },
             {
                 "role": "user", "content": article_text[:20000]
