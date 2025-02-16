@@ -3,64 +3,51 @@ import requests
 import os
 import json
 import groq
-from pydantic import BaseModel
-from flask import Flask, Response
+from pydantic import BaseModel, create_model
+from flask import Flask, Response, request
+from typing import Dict, Any, Type
 
 load_dotenv()
 
 
-class MandASchema(BaseModel):
-    company_acquired: str
-    acquiring_company: str
-    deal_value: int
-    date: str
 
-def stream_groq_response(article_text):
+def groq_response(custom_schema: Type[BaseModel], article_text: str):
     # TODO: parameter of adding user-defined schema 
 
-    print("Received call request")
-    def generate_response():
-        print("Initializing groq instances")
+    groq_key = os.getenv("GROQAPIKEY")
+    client = groq.Client(api_key=groq_key)
 
-        groq_key = os.getenv("GROQAPIKEY")
-        client = groq.Client(api_key=groq_key)
+
+    # Dynamically changing user schema
+    # user_schema: Dict[str, str] = request.json.get("schema", {})
+    # DynamicSchema = create_model("DynamicSchema", **{key: (eval(value), ...) for key, value in user_schema.items()})
+    # class RowList(BaseModel):
+    #     row_list: list[DynamicSchema]  # Enforce list of rows
         
-        headers = {"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"}
-        print("setting up parameters")
+    print("setting up parameters")
+    chat_completion = client.chat.completions.create(
+        model="llama3-70b-8192", 
+        messages=[
+            {
+                "role": "system", 
+                "content": f"""
+                    You extract mergers and acquisitions information formatted as schema defined rows from user given text. 
+                    You are in streaming mode 
+                    Only output each data chunk as a row following the below schema. 
+                    Don't output any other kind of text
+                    Note that this given text is all text in a webpage and can contain irrelevant info such as ads.
+                    The JSON object must use the schema: {json.dumps(custom_schema.model_json_schema(), indent=2)}"
+                """
+            },
+            {
+                "role": "user", "content": article_text[:20000]
+            }
+        ],
+        stream=False,
+        response_format={"type": "json_object"},
+    )
 
-        response = client.chat.completions.create(
-            model="llama3-70b-8192", 
-            messages=[
-                {
-                    "role": "system", 
-                    "content": f"""
-                                You extract mergers and acquisitions information formatted as schema defined rows from user given text. 
-                                You are in streaming mode 
-                                Only output each data chunk as a row following the below schema. 
-                                The schema is the following: acquired company (str) / acquiring company (str) / price_value (int) / date
-                                Don't output any other kind of text
-                                Note that this given text is all text in a webpage and can contain irrelevant info such as ads.
-                                """
-                },
-                {
-                    "role": "user", "content": article_text
-                }
-            ],
-            stream=True,  # Enable streaming responses,
-        )
-        print("Initializing groq streamed response \n")
+    response_content = custom_schema.model_validate_json(chat_completion.choices[0].message.content)
+    print("Output received from groq")
 
-        # Process the response stream
-        print("GROQ OUTPUT")
-        for chunk in response:
-            # Extract and print the message content incrementally
-            if chunk:
-                print(chunk.choices[0].delta.content, end="")
-                # yield f"data: {data} \n\n" # Send each chunk as a Server-Sent-Event message
-                # print(chunk.choices[0].delta.content, end="")
-    
-
-    generate_response()
-    print("")
-    # return Response(generate_response(), content_type='text/event-stream')
-    return 
+    return response_content

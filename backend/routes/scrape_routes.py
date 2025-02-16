@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify 
+from flask import Blueprint, Response, request, jsonify
 import requests
 from groq import Groq
 from scrape.scraper import scrape_urls, scrape_website, initialize_tools
@@ -7,41 +7,70 @@ scrapy_bp = Blueprint('scrape', __name__)
 
 @scrapy_bp.route('/start', methods=['POST'])
 def start_scraping():
+    print("Received call from frontend")
     data = request.json
+    user_prompt, user_schema = data.get("prompt"), data.get("schema")
+    print(f"User prompt: {user_prompt}, User Schema: {user_schema}")
+    # Scrapybara Scraping Urls (do not delete)
+    print("Starting to scrape for urls")
+    url_list, browser, client, scrapy_instance = scrape_urls(user_prompt)
 
-    # Scrapybara Scraping Code (do not delete)
-    url_list, browser, client, scrapy_instance = scrape_urls()
-    # client, browser, scrapy_instance = initialize_tools() # initialize however many threading instances
+    def generate():
+        for url in url_list:
+            # Scrapybara scrape website
+            print(f"Starting scrape for this url: {url}")
+            article_text = scrape_website(url, client, scrapy_instance, browser)
+            
+            # Sending to groq for quantitative data extraction
+            print(f"Completed scraping text for {url}, sending to groq")
+            try: 
+                response = requests.post(
+                    "http://127.0.0.1:5000/api/groq/process", 
+                    json={
+                        "article_text": article_text, 
+                        "schema": user_schema
+                        }, 
+                    headers={"Content-Type": "application/json"})
+                
+                # Stream the response
+                print("Received back groq output on call")
 
-    while url_list:
+                for chunk in response.iter_content(chunk_size=1024):
+                    if chunk:
+                        print(f"Chunk: {chunk}")
+                        yield chunk.decode("utf-8")  # Convert bytes to string before yielding
+        
+            except requests.exceptions.RequestException as e:
+                print(f"Error calling the API: {e}")
+                return None
+
+    return Response(generate(), content_type="application/json")
+
+    
+
+    # while url_list:
         #url = "https://aimresearch.co/ai-startups/top-tech-ma-deals-of-2024"
-        url = url_list.pop()
+        # url = url_list.pop()
         # client, browser, scrapy_instance = initialize_tools()
-        article_text = scrape_website(url, client, scrapy_instance, browser)
+        # article_text = scrape_website(url, client, scrapy_instance, browser)
 
-        #Sending results to groq
-        print("Sending results to groq")
-        groq_post_req(article_text)
+        # #Sending results to groq
+        # print("Sending results to groq")
 
-        print("Done scraping")
-    return jsonify({"hello": "world"})
-
-
-def groq_post_req(data):
-    url = "http://127.0.0.1:5000/api/groq/process"
-    headers = {"Content-Type": "application/json"}
-
-    try: 
-        response = requests.post(url, json=data, headers=headers)
-        response.raise_for_status()
-        return response.json()
+        # url = "http://127.0.0.1:5000/api/groq/process"
+        # headers = {"Content-Type": "application/json"}
+        # try: 
+        #     response = requests.post(url, json=article_text, headers=headers)
+        #     response.raise_for_status()
+        #     return response.json()
     
-    except requests.exceptions.RequestException as e:
-        print(f"Error calling the API: {e}")
-        return None
-    
+        # except requests.exceptions.RequestException as e:
+        #     print(f"Error calling the API: {e}")
+        #     return None
 
-
+        # print("Done scraping")
+    # return jsonify({"hello": "world"})
+    # return Response(generate(), content_type="application/json")
 
 
 text_data = """

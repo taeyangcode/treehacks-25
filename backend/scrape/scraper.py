@@ -20,12 +20,16 @@ class Website_Info(BaseModel):
     article_text: str
 
 
-def scrape_urls():
+def scrape_urls(prompt: str):
     # initialie Scrapybara client and scrapy instance 
-    print("Starting the client instance")
     scrapy_key = os.getenv("SCRAPYBARAKEY")
+    print("Starting the client instance")
     client = Scrapybara(api_key=scrapy_key)
+
+    print("Starting the remote ubuntu server")
     scrapy_instance = client.start_ubuntu(timeout_hours=0.1)
+
+    print("Initializing the browser")
     cdp_url = scrapy_instance.browser.start().cdp_url
 
     print("Starting playwright")
@@ -36,7 +40,10 @@ def scrape_urls():
     print("Starting browser")
     page = browser.new_page()
     page.goto("https://www.google.com")
-    page.locator("textarea.gLFyf").fill("Startup Acquisitions in 2024")
+
+    # TODO: LLM response to prompt engineer google search 
+
+    page.locator("textarea.gLFyf").fill(prompt)
     page.locator("textarea.gLFyf").press("Enter")
     page.wait_for_timeout(2000)
 
@@ -81,10 +88,7 @@ def initialize_tools():
 
 def scrape_website(url, client, scrapy_instance, browser):
     # Starting Scrapybara instance 
-    print("Getting new page")
     page = browser.new_page()
-
-    print(f"Going to provided url: {url}")
     page.goto(url)
     page.wait_for_timeout(1000)
 
