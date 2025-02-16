@@ -8,6 +8,10 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        mono: ["var(--font-departure)"],
+        manrope: ["var(--font-manrope)"],
+      },
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
